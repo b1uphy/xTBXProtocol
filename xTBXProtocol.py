@@ -10,7 +10,13 @@ This is a tbox internal communication protocol library.
 xDEBUG = True
 
 def splittbxmsg(buf):
-    pass
+    if buf[:2] != b'\x0d\x05': 
+        return (None,buf)
+    else:
+        length = buf[4]
+        msg = buf[:length+8]
+        return (msg,buf[length+8:])
+
 
 def calCKS(data:bytes):
     sum = data[0]
@@ -43,10 +49,15 @@ def createtbxprotocolmsg(dom:bytes,cmd:bytes,length:int,data:bytes):
     return b''.join([b'\x0d\x05',dom,cmd,length.to_bytes(1,'big',signed=False),data,calCKS(data),b'\x0d\x0a'])
 
 if __name__=='__main__':
-    badcksmsg = bytes.fromhex('0d05110701020304050607000d0a')
+    longstream = bytes.fromhex('0d0531330701020304050607000d0a')+b'\r\x0513\x05xxxxxx\r\n'
+    msg,bufleft = splittbxmsg(longstream)
+    print('msg:',msg.hex())
+    print('bufleft:',bufleft.hex())
+
+    badcksmsg = bytes.fromhex('0d0531330701020304050607000d0a')
     print('bad:',parsetbxprotocol(badcksmsg))
 
-    goodcksmsg = b'\r\x0512\x05xxxxxx\r\n'
+    goodcksmsg = b'\r\x0513\x05xxxxxx\r\n'
     print('good:',parsetbxprotocol(goodcksmsg))
 
     dom = b'1'
